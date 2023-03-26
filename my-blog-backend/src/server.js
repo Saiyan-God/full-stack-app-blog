@@ -1,63 +1,62 @@
+import {db, connectToDb} from './db.js';
 import express from 'express';
 const port = 8000;
 
-let articlesInfo = [
-    {
-        name: 'learn-react',
-        upvotes: 0,
-        comments: [],
-    },
-    {
-        name: 'learn-node',
-        upvotes: 0,
-        comments: [],
-    },
-    {
-        name: 'mongodb',
-        upvotes: 0,
-        comments: [],
-    },
-];
+const mongoDbCollection = 'articles';
 
 const app = express();
 app.use(express.json());
 
-app.post('/hello', (req, res) => {
-    console.log(req.body);
-    res.send(`hello, ${req.body.name}!`);
-});
+app.get('/api/articles/:name', async (req, res) => {
+    const { name } = req.params;
 
-app.get('/hello/:name', (req, res) => {
-    const {name} = req.params;
-    res.send(`Hey, ${name} (from url)`);
+    const article = await db.collection(mongoDbCollection).findOne({ name });
+    
+    if(article) {
+        res.json(article);
+    }
+    else {
+        res.status(404).send(`Article '${name}' not found`);
+    }
 })
 
-app.put('/api/articles/:name/upvote', (req, res) => {
+app.put('/api/articles/:name/upvote', async (req, res) => {
     const {name} = req.params;
-    const article = articlesInfo.find(article => article.name === name);
+
+    await db.collection(mongoDbCollection).updateOne({ name }, {
+        $inc: {upvotes: 1}
+    });
+
+    const article = await db.collection(mongoDbCollection).findOne({ name });
+
     if(article) {
-        article.upvotes += 1;
         res.send(`The '${name}' now has ${article.upvotes} upvote(s)`)
     } else {
         res.send(`The '${name}' article does not exist`)
     }
 });
 
-app.post('/api/articles/:name/new-comment', (req, res) => {
-    const {name} = req.params;
-    const {postedBy, text} = req.body;
-    const article = articlesInfo.find(article => article.name === name);
+app.post('/api/articles/:name/comments', async (req, res) => {
+    const {name} = req.params;              // extracts param from url
+    const {postedBy, text} = req.body;      // extracts params from payload body
+
+    await db.collection(mongoDbCollection).updateOne({ name }, {
+        $push: {comments: { postedBy, text}}
+    });
+    const article = await db.collection(mongoDbCollection).findOne({ name });
+    
+
     if(article) {
-        article.comments.push({
-            postedBy, text
-        });
         // res.send(`The '${name}' now has ${article.comments.length} comments(s)`)
         res.send(article.comments);
     } else {
-        res.send(`The '${name}' article does not exist`)
+        res.status(400).send(`The '${name}' article does not exist`)
     }
 });
 
-app.listen(port, () => {
-    console.log(`Server is listening on port ${port}`);
+connectToDb(() => {
+    console.log('successfully connected to database');
+    app.listen(port, () => {
+        console.log(`Server is listening on port ${port}`);
+    })
 })
