@@ -30,7 +30,7 @@ app.put('/api/articles/:name/upvote', async (req, res) => {
     const article = await db.collection(mongoDbCollection).findOne({ name });
 
     if(article) {
-        res.send(`The '${name}' now has ${article.upvotes} upvote(s)`)
+        res.send(article)
     } else {
         res.send(`The '${name}' article does not exist`)
     }
@@ -48,7 +48,7 @@ app.post('/api/articles/:name/comments', async (req, res) => {
 
     if(article) {
         // res.send(`The '${name}' now has ${article.comments.length} comments(s)`)
-        res.send(article.comments);
+        res.send(article);
     } else {
         res.status(400).send(`The '${name}' article does not exist`)
     }
