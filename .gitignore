@@ -3,6 +3,8 @@
 #universal
 */node_modules
 
+#databases
+mongo-db-data
 
 ## frontend
 
