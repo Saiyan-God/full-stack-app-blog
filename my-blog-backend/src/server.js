@@ -1,20 +1,32 @@
+import * as dotenv from 'dotenv';
+dotenv.config();
 import fs from 'fs';
+import path from 'path';
 import admin from 'firebase-admin';
 import {db, connectToDb} from './db.js';
 import express from 'express';
-const port = 8000;
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const PORT = process.env.PORT || 8000;
 
 const mongoDbCollection = 'articles';
 
 const credentials = JSON.parse(
     fs.readFileSync('./credentials.json'),
-);
-admin.initializeApp({
-    credential: admin.credential.cert(credentials),
-});
+    );
+    admin.initializeApp({
+        credential: admin.credential.cert(credentials),
+    });
 
 const app = express();
 app.use(express.json());
+app.use(express.static(path.join(__dirname, '../build')));
+
+app.get(/^(?!\/api).+/, (req, res) => {
+    res.sendFile(path.join(__dirname, '../build/index.html'));
+})
 
 app.use(async (req, res, next) => {
     const { authtoken } = req.headers;
@@ -34,8 +46,6 @@ app.use(async (req, res, next) => {
 app.get('/api/articles/:name', async (req, res) => {
     const { name } = req.params;
     const { uid } = req.user;
-    console.log('uid');
-    console.log(uid);
 
     const article = await db.collection(mongoDbCollection).findOne({ name });
     
@@ -43,7 +53,6 @@ app.get('/api/articles/:name', async (req, res) => {
         const upvoteIds = article.upvoteIds || [];
         article.canUpvote = (uid && !upvoteIds.includes(uid));
         res.json(article);
-        console.log(article);
     }
     else {
         res.status(404).send(`Article '${name}' not found`);
@@ -104,7 +113,7 @@ app.post('/api/articles/:name/comments', async (req, res) => {
 
 connectToDb(() => {
     console.log('successfully connected to database');
-    app.listen(port, () => {
-        console.log(`Server is listening on port ${port}`);
+    app.listen(PORT, () => {
+        console.log(`Server is listening on port ${PORT}`);
     })
 })

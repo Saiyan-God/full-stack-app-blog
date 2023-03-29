@@ -4,6 +4,7 @@
 *node_modules
 *env.js
 *credentials*
+*.env
 
 #databases
 mongo-db-data
